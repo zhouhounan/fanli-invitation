@@ -572,18 +572,21 @@
         console.log('Parse error, raw:', text);
       }
       
+      // 兼容对象数组格式
       allRecords = [];
       for (let i = 0; i < data.length; i++) {
         const item = data[i];
+        // 获取所有值（不依赖key名）
+        const values = Object.values(item);
         allRecords.push({
           id: i + 1,
-          name: item[0] || '',
-          phone: item[1] || '',
-          career: item[2] || '',
-          device: item[3] || '',
-          os: item[4] || '',
-          browser: item[5] || '',
-          time: item[6] || '',
+          name: values[0] || '',
+          phone: values[1] || '',
+          career: values[2] || '',
+          device: values[3] || '',
+          os: values[4] || '',
+          browser: values[5] || '',
+          time: values[6] || '',
         });
       }
       
