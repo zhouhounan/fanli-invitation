@@ -593,8 +593,8 @@
   // ====== STATS ======
   function updateStats() {
     const total   = allRecords.length;
-    const mobile  = allRecords.filter(r => r.device === '移动端').length;
-    const desktop = allRecords.filter(r => r.device === '桌面端').length;
+    const mobile  = allRecords.filter(r => String(r.device || '') === '移动端').length;
+    const desktop = allRecords.filter(r => String(r.device || '') === '桌面端').length;
     const todayStr= new Date().toLocaleDateString('zh-CN').replace(/\//g,'/');
     const today   = allRecords.filter(r => r.time && String(r.time).startsWith(todayStr)).length;
     document.getElementById('stat-total').textContent   = total;
@@ -610,8 +610,11 @@
     const device  = document.getElementById('filter-device').value;
 
     filtered = allRecords.filter(r => {
-      const matchQ = !q || r.name.toLowerCase().includes(q) || r.phone.includes(q);
-      const matchC = !career || r.career.includes(career);
+      const name = String(r.name || '');
+      const phone = String(r.phone || '');
+      const careerVal = String(r.career || '');
+      const matchQ = !q || name.toLowerCase().includes(q) || phone.includes(q);
+      const matchC = !career || careerVal.includes(career);
       const matchD = !device || r.device === device;
       return matchQ && matchC && matchD;
     });
@@ -631,7 +634,12 @@
 
   function doSort() {
     filtered.sort((a,b) => {
-      let av = a[sortField] || '', bv = b[sortField] || '';
+      let av = a[sortField];
+      let bv = b[sortField];
+      if (av === null || av === undefined) av = '';
+      if (bv === null || bv === undefined) bv = '';
+      av = String(av);
+      bv = String(bv);
       const cmp = av.localeCompare(bv, 'zh-CN');
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -657,8 +665,9 @@
     }
 
     tbody.innerHTML = rows.map((r, i) => {
-      const devClass = r.device === '移动端' ? 'device-mobile' : 'device-desktop';
-      const devIcon  = r.device === '移动端' ? '📱' : '💻';
+      const deviceVal = String(r.device || '');
+      const devClass = deviceVal === '移动端' ? 'device-mobile' : 'device-desktop';
+      const devIcon  = deviceVal === '移动端' ? '📱' : '💻';
       return `<tr>
         <td class="idx-num">${start+i+1}</td>
         <td class="name">${esc(r.name)}</td>
@@ -754,11 +763,13 @@
 
   // ====== UTILS ======
   function esc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
   function maskPhone(p) {
-    const s = String(p || '');
-    return s ? s.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '—';
+    if (p === null || p === undefined) return '—';
+    const s = String(p);
+    return s.length >= 7 ? s.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : s;
   }
   function showToast(msg) {
     const t = document.getElementById('toast');
