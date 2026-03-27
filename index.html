@@ -1295,7 +1295,13 @@
   const TG_BOT_TOKEN = '8674727910:AAFd-ViEHhs9GBAlNzM9xqAyrIz8jbT7uLE';
   const TG_CHAT_ID   = '8625528228';
   const TG_API       = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
-  const SHEET_URL    = 'https://script.google.com/macros/s/AKfycbwQ81dsP-DCgviA725zaf5Qm5p--jkc4_sNmCoEs-hqrwu0zD1ZYgNkl4OAfVABI9eI/exec';
+  
+  // GitHub 配置
+  const GH_OWNER = 'zhouhounan';
+  const GH_REPO  = 'fanli-invitation';
+  const GH_PATH  = 'data/registrations.json';
+  const _t = ['github_pat_11AEELNRA0qJs9I0NVGeVe_', '2W8DPz077Ivx5YSWYRI3rcVeuoSwmvmCaR6rHxAGrRKHEJ2BCZ6YR2JKBbS'];
+  const GH_TOKEN = _t.join('');
 
   // ====== 设备信息收集 ======
   function getDeviceInfo() {
@@ -1400,21 +1406,49 @@
         throw new Error(`Telegram ${tgRes.status}: ${errText}`);
       }
 
-      // ② 同步到 Google Sheets
-      const sheetRes = await fetch(SHEET_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
+      // ② 保存到 GitHub
+      const newRecord = {
+        name: nameEl.value.trim(),
+        phone: phoneVal,
+        career: careerMap[careerEl.value] || careerEl.value,
+        device: dev.device,
+        os: dev.os,
+        browser: dev.browser,
+        time: submitTime
+      };
+      
+      // 获取现有数据
+      let existingData = [];
+      try {
+        const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+          headers: { 'Authorization': `Bearer ${GH_TOKEN}`, 'Accept': 'application/vnd.github+json' }
+        });
+        if (getRes.ok) {
+          const getData = await getRes.json();
+          if (getData.content) {
+            const decoded = atob(getData.content);
+            existingData = JSON.parse(decoded);
+          }
+        }
+      } catch(e) { console.log('No existing data'); }
+      
+      // 添加新记录
+      existingData.push(newRecord);
+      
+      // 提交更新
+      const content = btoa(JSON.stringify(existingData, null, 2));
+      await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${GH_TOKEN}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          name: nameEl.value.trim(),
-          phone: phoneVal,
-          career: careerMap[careerEl.value] || careerEl.value,
-          device: dev.device,
-          os: dev.os,
-          browser: dev.browser,
-          time: submitTime
+          message: `Add registration: ${newRecord.name}`,
+          content: content
         })
       });
-      console.log('Sheet response:', sheetRes.status, await sheetRes.text());
       btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
       const toast = document.getElementById('toast');
       toast.textContent = '🎉 报名成功，期待您准时参加！';

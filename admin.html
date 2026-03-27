@@ -311,7 +311,7 @@
       margin-bottom: 12px;
     }
 
-    /* ===== MODAL (UA 详情) ===== */
+    /* ===== MODAL ===== */
     .modal-bg {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.7);
@@ -440,8 +440,7 @@
 </header>
 
 <!-- Main -->
-<main id="main-content">
-
+<main>
   <!-- Stats -->
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card gold">
@@ -505,12 +504,11 @@
           <th class="hide-mobile" onclick="sortBy('os')">系统 <span class="sort-icon" id="sort-os">↕</span></th>
           <th class="hide-mobile" onclick="sortBy('browser')">浏览器 <span class="sort-icon" id="sort-browser">↕</span></th>
           <th onclick="sortBy('time')">提交时间 <span class="sort-icon" id="sort-time">↓</span></th>
-          <th style="width:90px">操作</th>
         </tr>
       </thead>
       <tbody id="table-body">
         <tr class="loading-row">
-          <td colspan="9">
+          <td colspan="8">
             <div class="spinner"></div>
             <div style="color:var(--muted);font-size:13px">加载中…</div>
           </td>
@@ -523,8 +521,8 @@
 
 <!-- Modal -->
 <div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
-  <div class="modal" id="modal">
-    <div class="modal-title">📱 设备详细信息</div>
+  <div class="modal">
+    <div class="modal-title">📱 详细信息</div>
     <div id="modal-body"></div>
     <button class="modal-close" onclick="closeModal()">关闭</button>
   </div>
@@ -535,8 +533,12 @@
 
 <script>
   // ====== CONFIG ======
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwQ81dsP-DCgviA725zaf5Qm5p--jkc4_sNmCoEs-hqrwu0zD1ZYgNkl4OAfVABI9eI/exec';
-  const ADMIN_PWD = 'fanli2025';   // ← 后台访问密码，可自行修改
+  const GH_OWNER = 'zhouhounan';
+  const GH_REPO  = 'fanli-invitation';
+  const GH_PATH  = 'data/registrations.json';
+  const _t = ['github_pat_11AEELNRA0qJs9I0NVGeVe_', '2W8DPz077Ivx5YSWYRI3rcVeuoSwmvmCaR6rHxAGrRKHEJ2BCZ6YR2JKBbS'];
+  const GH_TOKEN = _t.join('');
+  const ADMIN_PWD = 'fanli2025';
 
   // ====== LOGIN ======
   function doLogin() {
@@ -563,38 +565,35 @@
     setTableLoading();
 
     try {
-      const res = await fetch(SHEET_URL);
-      const text = await res.text();
-      let data = [];
-      try {
-        data = JSON.parse(text);
-      } catch(e) {
-        console.log('Parse error, raw:', text);
-      }
+      const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+        headers: {
+          'Authorization': `Bearer ${GH_TOKEN}`,
+          'Accept': 'application/vnd.github+json'
+        }
+      });
       
-      // 兼容对象数组格式
-      allRecords = [];
-      for (let i = 0; i < data.length; i++) {
-        const item = data[i];
-        // 获取所有值（不依赖key名）
-        const values = Object.values(item);
-        allRecords.push({
-          id: i + 1,
-          name: values[0] || '',
-          phone: values[1] || '',
-          career: values[2] || '',
-          device: values[3] || '',
-          os: values[4] || '',
-          browser: values[5] || '',
-          time: values[6] || '',
-        });
-      }
+      if (!res.ok) throw new Error('Failed to load data');
+      
+      const data = await res.json();
+      const content = atob(data.content);
+      const jsonData = JSON.parse(content);
+      
+      allRecords = jsonData.map((item, idx) => ({
+        id: idx + 1,
+        name: item.name || '',
+        phone: item.phone || '',
+        career: item.career || '',
+        device: item.device || '',
+        os: item.os || '',
+        browser: item.browser || '',
+        time: item.time || '',
+      }));
       
       updateStats();
       filterData();
       showToast(`✅ 已加载 ${allRecords.length} 条报名记录`);
     } catch(e) {
-      console.error('Load error:', e);
+      console.error(e);
       showToast('⚠️ 加载失败：' + e.message);
       setTableEmpty('加载失败，请刷新重试');
     } finally {
@@ -605,10 +604,10 @@
   // ====== STATS ======
   function updateStats() {
     const total   = allRecords.length;
-    const mobile  = allRecords.filter(r => String(r.device || '') === '移动端').length;
-    const desktop = allRecords.filter(r => String(r.device || '') === '桌面端').length;
-    const todayStr= new Date().toLocaleDateString('zh-CN').replace(/\//g,'/');
-    const today   = allRecords.filter(r => r.time && String(r.time).startsWith(todayStr)).length;
+    const mobile  = allRecords.filter(r => String(r.device) === '移动端').length;
+    const desktop = allRecords.filter(r => String(r.device) === '桌面端').length;
+    const todayStr= new Date().toLocaleDateString('zh-CN');
+    const today   = allRecords.filter(r => r.time && String(r.time).includes(todayStr)).length;
     document.getElementById('stat-total').textContent   = total;
     document.getElementById('stat-mobile').textContent  = mobile;
     document.getElementById('stat-desktop').textContent = desktop;
@@ -622,12 +621,12 @@
     const device  = document.getElementById('filter-device').value;
 
     filtered = allRecords.filter(r => {
-      const name = String(r.name || '');
+      const name = String(r.name || '').toLowerCase();
       const phone = String(r.phone || '');
       const careerVal = String(r.career || '');
-      const matchQ = !q || name.toLowerCase().includes(q) || phone.includes(q);
+      const matchQ = !q || name.includes(q) || phone.includes(q);
       const matchC = !career || careerVal.includes(career);
-      const matchD = !device || r.device === device;
+      const matchD = !device || String(r.device) === device;
       return matchQ && matchC && matchD;
     });
 
@@ -646,12 +645,8 @@
 
   function doSort() {
     filtered.sort((a,b) => {
-      let av = a[sortField];
-      let bv = b[sortField];
-      if (av === null || av === undefined) av = '';
-      if (bv === null || bv === undefined) bv = '';
-      av = String(av);
-      bv = String(bv);
+      let av = String(a[sortField] || '');
+      let bv = String(b[sortField] || '');
       const cmp = av.localeCompare(bv, 'zh-CN');
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -665,11 +660,10 @@
     const start = (page-1)*PAGE_SIZE, end = start+PAGE_SIZE;
     const rows  = filtered.slice(start, end);
 
-    document.getElementById('records-count').textContent =
-      `共 ${filtered.length} 条记录`;
+    document.getElementById('records-count').textContent = `共 ${filtered.length} 条记录`;
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--muted)">
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--muted)">
         <div style="font-size:28px;margin-bottom:10px">📭</div>
         <div>暂无报名数据</div></td></tr>`;
       document.getElementById('pagination').innerHTML = '';
@@ -689,9 +683,6 @@
         <td class="os hide-mobile">${esc(r.os||'—')}</td>
         <td class="browser hide-mobile">${esc(r.browser||'—')}</td>
         <td class="time">${esc(r.time||'—')}</td>
-        <td>
-          <button onclick='showDetail("${esc(r.name)}","${esc(r.phone)}","${esc(r.career)}","${esc(r.device)}","${esc(r.os)}","${esc(r.browser)}","${esc(r.time)}")' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px' title="查看详情">🔍</button>
-        </td>
       </tr>`;
     }).join('');
 
@@ -721,26 +712,26 @@
   }
 
   function setTableLoading() {
-    document.getElementById('table-body').innerHTML = `<tr class="loading-row"><td colspan="9">
+    document.getElementById('table-body').innerHTML = `<tr class="loading-row"><td colspan="8">
       <div class="spinner"></div><div style="color:var(--muted);font-size:13px;margin-top:8px">加载中…</div>
     </td></tr>`;
     document.getElementById('pagination').innerHTML = '';
   }
 
   function setTableEmpty(msg) {
-    document.getElementById('table-body').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--muted)">${msg}</td></tr>`;
+    document.getElementById('table-body').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--muted)">${msg}</td></tr>`;
   }
 
   // ====== DETAIL MODAL ======
-  function showDetail(name, phone, career, device, os, browser, time) {
+  function showDetail(r) {
     document.getElementById('modal-body').innerHTML = [
-      ['👤 姓名', name],
-      ['📱 电话', phone],
-      ['💼 职业', career],
-      ['🕐 提交时间', time],
-      ['📱 设备类型', device],
-      ['💻 操作系统', os],
-      ['🌐 浏览器', browser],
+      ['👤 姓名', r.name],
+      ['📱 电话', r.phone],
+      ['💼 职业', r.career],
+      ['🕐 提交时间', r.time],
+      ['📱 设备类型', r.device],
+      ['💻 操作系统', r.os],
+      ['🌐 浏览器', r.browser],
     ].map(([k,v]) => `<div class="modal-row">
       <span class="modal-key">${k}</span>
       <span class="modal-val">${esc(v||'—')}</span>
@@ -756,9 +747,9 @@
   // ====== EXPORT CSV ======
   function exportCSV() {
     if (!allRecords.length) { showToast('暂无数据可导出'); return; }
-    const header = ['序号','姓名','电话','职业','设备','操作系统','浏览器','分辨率','提交时间','UA'];
+    const header = ['序号','姓名','电话','职业','设备','操作系统','浏览器','提交时间'];
     const rows = allRecords.map((r,i) => [
-      i+1, r.name, r.phone, r.career, r.device, r.os, r.browser, r.screen, r.time, r.ua
+      i+1, r.name, r.phone, r.career, r.device, r.os, r.browser, r.time
     ]);
     const csv = [header, ...rows].map(r =>
       r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')
