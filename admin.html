@@ -571,7 +571,7 @@
       let p = 1;
       while (true) {
         // labels 中文需 encodeURIComponent；不过滤标签，前端筛选更可靠
-        const url = `${API}/repos/${OWNER}/${REPO}/issues?state=open&per_page=100&page=${p}`;
+        const url = `${API}/repos/${OWNER}/${REPO}/issues?state=closed&per_page=100&page=${p}`;
         const res = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${TOKEN}`,
