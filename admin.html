@@ -565,19 +565,17 @@
     try {
       const res = await fetch(SHEET_URL);
       const text = await res.text();
-      console.log('Raw response:', text);
       const data = JSON.parse(text);
-      console.log('Parsed data:', data);
       
       allRecords = data.map((item, idx) => ({
         id: idx + 1,
-        name: item['姓名'] || item['name'] || '',
-        phone: item['电话'] || item['phone'] || '',
-        career: item['职业'] || item['career'] || '',
-        device: item['设备'] || item['device'] || '',
-        os: item['系统'] || item['os'] || '',
-        browser: item['浏览器'] || item['browser'] || '',
-        time: item['时间'] || item['time'] || '',
+        name: item['姓名'] || item['name'] || item[Object.keys(item)[0]] || '',
+        phone: item['电话'] || item['phone'] || item[Object.keys(item)[1]] || '',
+        career: item['职业'] || item['career'] || item[Object.keys(item)[2]] || '',
+        device: item['设备'] || item['device'] || item[Object.keys(item)[3]] || '',
+        os: item['系统'] || item['os'] || item[Object.keys(item)[4]] || '',
+        browser: item['浏览器'] || item['browser'] || item[Object.keys(item)[5]] || '',
+        time: item['时间'] || item['time'] || item[Object.keys(item)[6]] || '',
       }));
       
       updateStats();
