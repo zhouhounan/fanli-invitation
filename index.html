@@ -1292,13 +1292,9 @@
   }, { passive: true });
 
   // ====== CONFIG ======
-  const _t = ['github_pat_11AEELNRA0qJs9I0NVGeVe_', '2W8DPz077Ivx5YSWYRI3rcVeuoSwmvmCaR6rHxAGrRKHEJ2BCZ6YR2JKBbS'];
-  const GH_TOKEN   = _t.join('');
-  const GH_OWNER   = 'zhouhounan';
-  const GH_REPO    = 'fanli-invitation';
-  const GH_API     = 'https://api.github.com';
-  const _sk = ['SCT329840TKi6e', '0rl6RFfKt4VfuMlWyqUh'];
-  const SERVERCHAN_KEY = _sk.join('');
+  const TG_BOT_TOKEN = '8674727910:AAFd-ViEHhs9GBAlNzM9xqAyrIz8jbT7uLE';
+  const TG_CHAT_ID   = '8625528228';
+  const TG_API       = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
 
   // ====== 设备信息收集 ======
   function getDeviceInfo() {
@@ -1375,68 +1371,33 @@
     };
 
     const issueTitle = `【报名】${nameEl.value.trim()} · ${submitTime}`;
-    const issueBody = [
-      '## 📋 报名信息',
-      '',
-      `| 字段 | 内容 |`,
-      `|------|------|`,
-      `| 👤 姓名 | ${nameEl.value.trim()} |`,
-      `| 📱 电话 | ${phoneVal} |`,
-      `| 💼 职业 | ${careerMap[careerEl.value] || careerEl.value} |`,
-      `| 🕐 提交时间 | ${submitTime} |`,
-      '',
-      '## 📱 设备信息',
-      '',
-      `| 字段 | 内容 |`,
-      `|------|------|`,
-      `| 设备类型 | ${dev.device} |`,
-      `| 操作系统 | ${dev.os} |`,
-      `| 浏览器 | ${dev.browser} |`,
-      `| 分辨率 | ${dev.screen} |`,
-      `| UA | \`${dev.ua}\` |`,
+    const tgMsg = [
+      `📋 <b>新报名提醒</b>`,
+      ``,
+      `👤 <b>姓名：</b>${nameEl.value.trim()}`,
+      `📱 <b>电话：</b>${phoneVal}`,
+      `💼 <b>职业：</b>${careerMap[careerEl.value] || careerEl.value}`,
+      `📱 <b>设备：</b>${dev.device}`,
+      `🖥️ <b>系统：</b>${dev.os}`,
+      `🌐 <b>浏览器：</b>${dev.browser}`,
+      `🕐 <b>时间：</b>${submitTime}`,
     ].join('\n');
 
     try {
-      // ① 存档到 GitHub Issues
-      const ghRes = await fetch(
-        `${GH_API}/repos/${GH_OWNER}/${GH_REPO}/issues`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${GH_TOKEN}`,
-            'Accept': 'application/vnd.github+json',
-            'Content-Type': 'application/json',
-            'X-GitHub-Api-Version': '2022-11-28'
-          },
-          body: JSON.stringify({
-            title: issueTitle,
-            body:  issueBody,
-            labels: ['报名']
-          })
-        }
-      );
-      if (!ghRes.ok) {
-        const errText = await ghRes.text();
-        throw new Error(`GitHub ${ghRes.status}: ${errText}`);
+      // ① 发送 Telegram 通知
+      const tgRes = await fetch(`${TG_API}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TG_CHAT_ID,
+          text: tgMsg,
+          parse_mode: 'HTML'
+        })
+      });
+      if (!tgRes.ok) {
+        const errText = await tgRes.text();
+        throw new Error(`Telegram ${tgRes.status}: ${errText}`);
       }
-
-      // ② 微信通知（Server酱，仅在填写了 SendKey 时触发）
-      if (SERVERCHAN_KEY && SERVERCHAN_KEY !== 'REPLACE_WITH_SENDKEY') {
-        const wxTitle = encodeURIComponent(`📋 新报名：${nameEl.value.trim()}`);
-        const wxMsg   = encodeURIComponent(
-          `姓名：${nameEl.value.trim()}\n` +
-          `电话：${phoneVal}\n` +
-          `职业：${careerMap[careerEl.value] || careerEl.value}\n` +
-          `设备：${dev.device} · ${dev.os}\n` +
-          `时间：${submitTime}`
-        );
-        // 使用 no-cors，微信通知只管发出，不等响应
-        fetch(`https://sctapi.ftqq.com/${SERVERCHAN_KEY}.send?title=${wxTitle}&desp=${wxMsg}`, {
-          method: 'GET', mode: 'no-cors'
-        }).catch(() => {});
-      }
-
-      // ③ 成功反馈
       btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
       const toast = document.getElementById('toast');
       toast.textContent = '🎉 报名成功，期待您准时参加！';
