@@ -535,10 +535,10 @@
 
 <script>
   // ====== CONFIG ======
-  const TOKEN = 'de3fedd48e99052c579b24a9b30b6b3d';
+  const TOKEN = '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'; // GitHub token
   const OWNER = 'zhouhounan';
   const REPO  = 'fanli-invitation';
-  const API   = 'https://gitee.com/api/v5';
+  const API   = 'https://api.github.com';
   const ADMIN_PWD = 'fanli2025';   // ← 后台访问密码，可自行修改
 
   // ====== LOGIN ======
@@ -570,7 +570,8 @@
       let p = 1;
       while (true) {
         const res = await fetch(
-          `${API}/repos/${OWNER}/${REPO}/issues?state=open&labels=报名&per_page=100&page=${p}&access_token=${TOKEN}`
+          `${API}/repos/${OWNER}/${REPO}/issues?state=open&labels=报名&per_page=100&page=${p}`,
+          { headers: { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } }
         );
         if (!res.ok) throw new Error(res.statusText);
         const data = await res.json();
