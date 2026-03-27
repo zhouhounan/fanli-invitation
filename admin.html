@@ -535,7 +535,8 @@
 
 <script>
   // ====== CONFIG ======
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwQ81dsP-DCgviA725zaf5Qm5p--jkc4_sNmCoEs-hqrwu0zD1ZYgNkl4OAfVABI9eI/exec';
+  const TG_BOT_TOKEN = '8674727910:AAFd-ViEHhs9GBAlNzM9xqAyrIz8jbT7uLE';
+  const TG_API       = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
   const ADMIN_PWD = 'fanli2025';   // ← 后台访问密码，可自行修改
 
   // ====== LOGIN ======
@@ -563,19 +564,44 @@
     setTableLoading();
 
     try {
-      const res = await fetch(SHEET_URL);
-      const text = await res.text();
-      const data = JSON.parse(text);
+      const res = await fetch(`${TG_API}/getUpdates`);
+      const data = await res.json();
       
-      allRecords = data.map((item, idx) => ({
+      if (!data.ok) throw new Error(data.description || 'API error');
+      
+      const messages = data.result
+        .filter(m => m.message && m.message.text)
+        .map(m => {
+          const text = m.message.text;
+          const lines = text.split('\n');
+          const item = {};
+          lines.forEach(line => {
+            const match = line.match(/^(.+?)[:：]\s*(.*)$/);
+            if (match) {
+              const key = match[1].replace(/[📋👤📱💼🖥️🌐🕐🔢]/g, '').trim();
+              const val = match[2].trim();
+              if (key === '姓名') item.name = val;
+              if (key === '电话') item.phone = val;
+              if (key === '职业') item.career = val;
+              if (key === '设备') item.device = val;
+              if (key === '系统') item.os = val;
+              if (key === '浏览器') item.browser = val;
+              if (key === '时间') item.time = val;
+            }
+          });
+          return item;
+        })
+        .filter(item => item.name);
+      
+      allRecords = messages.map((item, idx) => ({
         id: idx + 1,
-        name: item['姓名'] || item['name'] || item[Object.keys(item)[0]] || '',
-        phone: item['电话'] || item['phone'] || item[Object.keys(item)[1]] || '',
-        career: item['职业'] || item['career'] || item[Object.keys(item)[2]] || '',
-        device: item['设备'] || item['device'] || item[Object.keys(item)[3]] || '',
-        os: item['系统'] || item['os'] || item[Object.keys(item)[4]] || '',
-        browser: item['浏览器'] || item['browser'] || item[Object.keys(item)[5]] || '',
-        time: item['时间'] || item['time'] || item[Object.keys(item)[6]] || '',
+        name: item.name || '',
+        phone: item.phone || '',
+        career: item.career || '',
+        device: item.device || '',
+        os: item.os || '',
+        browser: item.browser || '',
+        time: item.time || '',
       }));
       
       updateStats();
@@ -678,7 +704,7 @@
         <td class="browser hide-mobile">${esc(r.browser||'—')}</td>
         <td class="time">${esc(r.time||'—')}</td>
         <td>
-          <button onclick='showDetail(${JSON.stringify(Object.values(r).map(v => v === null || v === undefined ? "" : String(v))).replace(/'/g,"&#39;")})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px' title="查看详情">🔍</button>
+          <button onclick='showDetail("${esc(r.name)}","${esc(r.phone)}","${esc(r.career)}","${esc(r.device)}","${esc(r.os)}","${esc(r.browser)}","${esc(r.time)}")' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px' title="查看详情">🔍</button>
         </td>
       </tr>`;
     }).join('');
@@ -720,17 +746,15 @@
   }
 
   // ====== DETAIL MODAL ======
-  function showDetail(r) {
+  function showDetail(name, phone, career, device, os, browser, time) {
     document.getElementById('modal-body').innerHTML = [
-      ['👤 姓名', r.name],
-      ['📱 电话', r.phone],
-      ['💼 职业', r.career],
-      ['🕐 提交时间', r.time],
-      ['📱 设备类型', r.device],
-      ['💻 操作系统', r.os],
-      ['🌐 浏览器', r.browser],
-      ['📐 分辨率', r.screen],
-      ['🔖 UA', r.ua],
+      ['👤 姓名', name],
+      ['📱 电话', phone],
+      ['💼 职业', career],
+      ['🕐 提交时间', time],
+      ['📱 设备类型', device],
+      ['💻 操作系统', os],
+      ['🌐 浏览器', browser],
     ].map(([k,v]) => `<div class="modal-row">
       <span class="modal-key">${k}</span>
       <span class="modal-val">${esc(v||'—')}</span>
