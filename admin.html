@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>报名管理后台 — 范蠡研讨会</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --gold-dark: #8a6820;
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #1c2230;
+      --border: rgba(201,168,76,0.2);
+      --border2: rgba(255,255,255,0.06);
+      --text: #e6edf3;
+      --muted: rgba(230,237,243,0.5);
+      --teal: #1de9b6;
+      --red: #f85149;
+      --green: #3fb950;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans SC', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ===== LOGIN SCREEN ===== */
+    #login-screen {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      z-index: 999;
+    }
+    #login-screen.hide { display: none; }
+    .login-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 340px;
+      text-align: center;
+    }
+    .login-logo {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 24px;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .login-sub { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+    .login-input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 14px;
+      transition: border-color .25s;
+    }
+    .login-input:focus { border-color: var(--gold); }
+    .login-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: #0d1117;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 13px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s;
+    }
+    .login-btn:hover { opacity: .88; }
+    .login-err { font-size: 12px; color: var(--red); margin-top: 10px; display:none; }
+    .login-err.show { display:block; }
+
+    /* ===== HEADER ===== */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border2);
+      padding: 0 28px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 18px;
+      color: var(--gold);
+    }
+    .header-badge {
+      font-size: 11px;
+      background: rgba(201,168,76,0.15);
+      color: var(--gold);
+      border: 1px solid var(--border);
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .btn-refresh {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,0.1); }
+    .btn-refresh.loading .icon { animation: spin .8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-export {
+      display: flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: #0d1117;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      transition: opacity .2s;
+    }
+    .btn-export:hover { opacity: .88; }
+
+    /* ===== MAIN ===== */
+    main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+    /* ===== STATS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content:'';
+      position:absolute;
+      bottom:0;left:0;right:0;height:2px;
+      border-radius:0 0 10px 10px;
+    }
+    .stat-card.gold::after { background: linear-gradient(90deg, transparent,var(--gold),transparent); }
+    .stat-card.teal::after { background: linear-gradient(90deg, transparent,var(--teal),transparent); }
+    .stat-card.green::after { background: linear-gradient(90deg, transparent,var(--green),transparent); }
+    .stat-card.red::after { background: linear-gradient(90deg, transparent,var(--red),transparent); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--text); }
+    .stat-icon {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      font-size: 28px; opacity: 0.15;
+    }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .search-wrap {
+      position: relative; flex: 1; min-width: 200px;
+    }
+    .search-wrap .icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px; pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 9px 12px 9px 34px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .search-input:focus { border-color: var(--gold); }
+    .filter-select {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 9px 32px 9px 12px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .records-count {
+      font-size: 12px; color: var(--muted);
+      margin-left: auto; white-space: nowrap;
+    }
+
+    /* ===== TABLE ===== */
+    .table-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr {
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border2);
+    }
+    th {
+      padding: 13px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color .2s;
+    }
+    th:hover { color: var(--gold); }
+    th .sort-icon { margin-left: 4px; opacity: 0.4; }
+    th.sorted { color: var(--gold); }
+    th.sorted .sort-icon { opacity: 1; }
+    tbody tr {
+      border-bottom: 1px solid var(--border2);
+      transition: background .15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    td {
+      padding: 14px 16px;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    td.name { font-weight: 600; }
+    td.phone { font-family: monospace; font-size: 13px; letter-spacing: 0.5px; }
+    .career-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      background: rgba(201,168,76,0.1);
+      color: var(--gold);
+      border: 1px solid rgba(201,168,76,0.25);
+    }
+    .device-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+    }
+    .device-mobile { background: rgba(29,233,182,0.1); color: var(--teal); border: 1px solid rgba(29,233,182,0.25); }
+    .device-desktop { background: rgba(139,92,246,0.1); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+    td.time { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    td.os { font-size: 12px; color: var(--muted); max-width: 160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    td.browser { font-size: 12px; color: var(--muted); max-width: 160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .idx-num { color: var(--muted); font-size: 12px; }
+
+    /* ===== EMPTY / LOADING ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state .big { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+    .loading-row td {
+      text-align: center;
+      padding: 48px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 2px solid rgba(201,168,76,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    /* ===== MODAL (UA 详情) ===== */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-bg.show { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      width: 90%; max-width: 500px;
+      transform: translateY(16px);
+      transition: transform .25s;
+    }
+    .modal-bg.show .modal { transform: translateY(0); }
+    .modal-title {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 17px; color: var(--gold);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .modal-row {
+      display: flex; gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border2);
+      font-size: 13px;
+    }
+    .modal-row:last-child { border-bottom: none; }
+    .modal-key { color: var(--muted); min-width: 80px; flex-shrink: 0; }
+    .modal-val { color: var(--text); word-break: break-all; }
+    .modal-close {
+      margin-top: 20px; width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.1); }
+
+    /* ===== PAGINATION ===== */
+    .pagination {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 20px;
+      border-top: 1px solid var(--border2);
+    }
+    .page-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .page-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+    .page-btn.active { background: rgba(201,168,76,0.15); color: var(--gold); border-color: var(--border); }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all .3s;
+      z-index: 999;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 768px) {
+      main { padding: 16px; }
+      header { padding: 0 16px; }
+      .hide-mobile { display: none; }
+      td.os, td.browser { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🏛️ 范蠡研讨会</div>
+    <div class="login-sub">报名管理后台</div>
+    <input type="password" class="login-input" id="login-pwd" placeholder="请输入访问密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">进入后台</button>
+    <div class="login-err" id="login-err">密码错误，请重试</div>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <div class="header-logo">📊 报名管理</div>
+    <div class="header-badge">范蠡消费互联网研讨会</div>
+  </div>
+  <div class="header-right">
+    <button class="btn-refresh" id="btn-refresh" onclick="loadData()">
+      <span class="icon">🔄</span>
+      <span>刷新</span>
+    </button>
+    <button class="btn-export" onclick="exportCSV()">
+      <span>📥</span>
+      <span>导出 CSV</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main -->
+<main id="main-content">
+
+  <!-- Stats -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card gold">
+      <div class="stat-label">总报名人数</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-icon">👥</div>
+    </div>
+    <div class="stat-card teal">
+      <div class="stat-label">移动端报名</div>
+      <div class="stat-value" id="stat-mobile">—</div>
+      <div class="stat-icon">📱</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">桌面端报名</div>
+      <div class="stat-value" id="stat-desktop">—</div>
+      <div class="stat-icon">💻</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">今日新增</div>
+      <div class="stat-value" id="stat-today">—</div>
+      <div class="stat-icon">📅</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="搜索姓名、电话…" oninput="filterData()">
+    </div>
+    <select class="filter-select" id="filter-career" onchange="filterData()">
+      <option value="">全部职业</option>
+      <option value="创业者/企业主">创业者/企业主</option>
+      <option value="投资人/资方">投资人/资方</option>
+      <option value="技术从业者">技术从业者</option>
+      <option value="金融/财务">金融/财务</option>
+      <option value="市场/运营">市场/运营</option>
+      <option value="政府/事业单位">政府/事业单位</option>
+      <option value="媒体/自媒体">媒体/自媒体</option>
+      <option value="在校学生">在校学生</option>
+      <option value="其他">其他</option>
+    </select>
+    <select class="filter-select" id="filter-device" onchange="filterData()">
+      <option value="">全部设备</option>
+      <option value="移动端">移动端</option>
+      <option value="桌面端">桌面端</option>
+    </select>
+    <span class="records-count" id="records-count"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:48px">#</th>
+          <th onclick="sortBy('name')">姓名 <span class="sort-icon" id="sort-name">↕</span></th>
+          <th onclick="sortBy('phone')">电话 <span class="sort-icon" id="sort-phone">↕</span></th>
+          <th onclick="sortBy('career')">职业 <span class="sort-icon" id="sort-career">↕</span></th>
+          <th onclick="sortBy('device')">设备 <span class="sort-icon" id="sort-device">↕</span></th>
+          <th class="hide-mobile" onclick="sortBy('os')">系统 <span class="sort-icon" id="sort-os">↕</span></th>
+          <th class="hide-mobile" onclick="sortBy('browser')">浏览器 <span class="sort-icon" id="sort-browser">↕</span></th>
+          <th onclick="sortBy('time')">提交时间 <span class="sort-icon" id="sort-time">↓</span></th>
+          <th style="width:60px">详情</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr class="loading-row">
+          <td colspan="9">
+            <div class="spinner"></div>
+            <div style="color:var(--muted);font-size:13px">加载中…</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-title">📱 设备详细信息</div>
+    <div id="modal-body"></div>
+    <button class="modal-close" onclick="closeModal()">关闭</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  // ====== CONFIG ======
+  const TOKEN = 'GLrDeVgoE5HsfN1jc8DA';
+  const OWNER = 'zhouhounan';
+  const REPO  = 'fanli-invitation';
+  const API   = 'https://gitee.com/api/v5';
+  const ADMIN_PWD = 'fanli2025';   // ← 后台访问密码，可自行修改
+
+  // ====== LOGIN ======
+  function doLogin() {
+    const v = document.getElementById('login-pwd').value;
+    if (v === ADMIN_PWD) {
+      document.getElementById('login-screen').classList.add('hide');
+      loadData();
+    } else {
+      document.getElementById('login-err').classList.add('show');
+    }
+  }
+
+  // ====== DATA ======
+  let allRecords = [];
+  let filtered   = [];
+  let sortField  = 'time';
+  let sortDir    = 'desc';
+  let page = 1;
+  const PAGE_SIZE = 20;
+
+  async function loadData() {
+    const btn = document.getElementById('btn-refresh');
+    btn.classList.add('loading');
+    setTableLoading();
+
+    try {
+      let issues = [];
+      let p = 1;
+      while (true) {
+        const res = await fetch(
+          `${API}/repos/${OWNER}/${REPO}/issues?state=open&labels=报名&per_page=100&page=${p}&access_token=${TOKEN}`
+        );
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) break;
+        issues = issues.concat(data);
+        if (data.length < 100) break;
+        p++;
+      }
+
+      allRecords = issues.map(issue => parseIssue(issue)).filter(Boolean);
+      updateStats();
+      filterData();
+      showToast(`✅ 已加载 ${allRecords.length} 条报名记录`);
+    } catch(e) {
+      showToast('⚠️ 加载失败：' + e.message);
+      setTableEmpty('加载失败，请刷新重试');
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
+
+  function parseIssue(issue) {
+    try {
+      const body = issue.body || '';
+      const get = (key) => {
+        const re = new RegExp(`\\| ${key} \\| (.+?) \\|`);
+        return (body.match(re) || [])[1]?.trim() || '';
+      };
+      return {
+        id: issue.number,
+        name: get('👤 姓名'),
+        phone: get('📱 电话'),
+        career: get('💼 职业'),
+        time: get('🕐 提交时间') || issue.created_at?.replace('T',' ').replace('+08:00',''),
+        device: get('设备类型'),
+        os: get('操作系统'),
+        browser: get('浏览器'),
+        screen: get('分辨率'),
+        ua: get('UA').replace(/`/g,''),
+        raw: issue
+      };
+    } catch(e) { return null; }
+  }
+
+  // ====== STATS ======
+  function updateStats() {
+    const total   = allRecords.length;
+    const mobile  = allRecords.filter(r => r.device === '移动端').length;
+    const desktop = allRecords.filter(r => r.device === '桌面端').length;
+    const todayStr= new Date().toLocaleDateString('zh-CN');
+    const today   = allRecords.filter(r => r.time.startsWith(todayStr.replace(/\//g,'/'))).length;
+    document.getElementById('stat-total').textContent   = total;
+    document.getElementById('stat-mobile').textContent  = mobile;
+    document.getElementById('stat-desktop').textContent = desktop;
+    document.getElementById('stat-today').textContent   = today;
+  }
+
+  // ====== FILTER & SORT ======
+  function filterData() {
+    const q       = document.getElementById('search-input').value.toLowerCase();
+    const career  = document.getElementById('filter-career').value;
+    const device  = document.getElementById('filter-device').value;
+
+    filtered = allRecords.filter(r => {
+      const matchQ = !q || r.name.toLowerCase().includes(q) || r.phone.includes(q);
+      const matchC = !career || r.career.includes(career);
+      const matchD = !device || r.device === device;
+      return matchQ && matchC && matchD;
+    });
+
+    doSort();
+  }
+
+  function sortBy(field) {
+    if (sortField === field) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortField = field; sortDir = 'asc'; }
+    document.querySelectorAll('th .sort-icon').forEach(el => el.textContent = '↕');
+    const el = document.getElementById('sort-' + field);
+    if (el) el.textContent = sortDir === 'asc' ? '↑' : '↓';
+    document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
+    doSort();
+  }
+
+  function doSort() {
+    filtered.sort((a,b) => {
+      let av = a[sortField] || '', bv = b[sortField] || '';
+      const cmp = av.localeCompare(bv, 'zh-CN');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    page = 1;
+    renderTable();
+  }
+
+  // ====== RENDER ======
+  function renderTable() {
+    const tbody = document.getElementById('table-body');
+    const start = (page-1)*PAGE_SIZE, end = start+PAGE_SIZE;
+    const rows  = filtered.slice(start, end);
+
+    document.getElementById('records-count').textContent =
+      `共 ${filtered.length} 条记录`;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--muted)">
+        <div style="font-size:28px;margin-bottom:10px">📭</div>
+        <div>暂无报名数据</div></td></tr>`;
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    tbody.innerHTML = rows.map((r, i) => {
+      const devClass = r.device === '移动端' ? 'device-mobile' : 'device-desktop';
+      const devIcon  = r.device === '移动端' ? '📱' : '💻';
+      return `<tr>
+        <td class="idx-num">${start+i+1}</td>
+        <td class="name">${esc(r.name)}</td>
+        <td class="phone">${maskPhone(r.phone)}</td>
+        <td><span class="career-badge">${esc(r.career)}</span></td>
+        <td><span class="device-badge ${devClass}">${devIcon} ${esc(r.device||'—')}</span></td>
+        <td class="os hide-mobile">${esc(r.os||'—')}</td>
+        <td class="browser hide-mobile">${esc(r.browser||'—')}</td>
+        <td class="time">${esc(r.time||'—')}</td>
+        <td><button onclick='showDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px'>🔍</button></td>
+      </tr>`;
+    }).join('');
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const total = Math.ceil(filtered.length / PAGE_SIZE);
+    if (total <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+    let html = `<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+    for (let i=1;i<=total;i++) {
+      if (i===1||i===total||Math.abs(i-page)<=1)
+        html += `<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+      else if (Math.abs(i-page)===2)
+        html += `<span style="color:var(--muted);padding:0 4px">…</span>`;
+    }
+    html += `<button class="page-btn" onclick="goPage(${page+1})" ${page===total?'disabled':''}>›</button>`;
+    document.getElementById('pagination').innerHTML = html;
+  }
+
+  function goPage(p) {
+    const total = Math.ceil(filtered.length / PAGE_SIZE);
+    if (p<1||p>total) return;
+    page = p;
+    renderTable();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function setTableLoading() {
+    document.getElementById('table-body').innerHTML = `<tr class="loading-row"><td colspan="9">
+      <div class="spinner"></div><div style="color:var(--muted);font-size:13px;margin-top:8px">加载中…</div>
+    </td></tr>`;
+    document.getElementById('pagination').innerHTML = '';
+  }
+
+  function setTableEmpty(msg) {
+    document.getElementById('table-body').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--muted)">${msg}</td></tr>`;
+  }
+
+  // ====== DETAIL MODAL ======
+  function showDetail(r) {
+    document.getElementById('modal-body').innerHTML = [
+      ['👤 姓名', r.name],
+      ['📱 电话', r.phone],
+      ['💼 职业', r.career],
+      ['🕐 提交时间', r.time],
+      ['📱 设备类型', r.device],
+      ['💻 操作系统', r.os],
+      ['🌐 浏览器', r.browser],
+      ['📐 分辨率', r.screen],
+      ['🔖 UA', r.ua],
+    ].map(([k,v]) => `<div class="modal-row">
+      <span class="modal-key">${k}</span>
+      <span class="modal-val">${esc(v||'—')}</span>
+    </div>`).join('');
+    document.getElementById('modal-bg').classList.add('show');
+  }
+
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('modal-bg'))
+      document.getElementById('modal-bg').classList.remove('show');
+  }
+
+  // ====== EXPORT CSV ======
+  function exportCSV() {
+    if (!allRecords.length) { showToast('暂无数据可导出'); return; }
+    const header = ['序号','姓名','电话','职业','设备','操作系统','浏览器','分辨率','提交时间','UA'];
+    const rows = allRecords.map((r,i) => [
+      i+1, r.name, r.phone, r.career, r.device, r.os, r.browser, r.screen, r.time, r.ua
+    ]);
+    const csv = [header, ...rows].map(r =>
+      r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')
+    ).join('\n');
+    const blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `报名数据_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.csv`;
+    a.click();
+    showToast(`✅ 已导出 ${allRecords.length} 条数据`);
+  }
+
+  // ====== UTILS ======
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function maskPhone(p) {
+    return p ? p.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '—';
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
+</body>
+</html>

@@ -1266,8 +1266,47 @@
     }
   }, { passive: true });
 
+  // ====== CONFIG ======
+  const GH_TOKEN  = 'GLrDeVgoE5HsfN1jc8DA';   // Gitee 私人令牌
+  const GH_OWNER  = 'zhouhounan';
+  const GH_REPO   = 'fanli-invitation';
+  const API_BASE  = 'https://gitee.com/api/v5';
+
+  // ====== 设备信息收集 ======
+  function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let device = '未知设备', os = '未知系统', browser = '未知浏览器';
+
+    // OS
+    if (/iPhone/.test(ua))        os = 'iOS ' + (ua.match(/OS ([\d_]+)/) || [])[1]?.replace(/_/g,'.');
+    else if (/iPad/.test(ua))     os = 'iPadOS ' + (ua.match(/OS ([\d_]+)/) || [])[1]?.replace(/_/g,'.');
+    else if (/Android/.test(ua))  os = 'Android ' + (ua.match(/Android ([\d.]+)/) || [])[1];
+    else if (/Windows NT/.test(ua)) {
+      const ver = {'10.0':'10','6.3':'8.1','6.2':'8','6.1':'7'};
+      const v = (ua.match(/Windows NT ([\d.]+)/) || [])[1];
+      os = 'Windows ' + (ver[v] || v);
+    } else if (/Mac OS X/.test(ua)) os = 'macOS ' + (ua.match(/Mac OS X ([\d_]+)/) || [])[1]?.replace(/_/g,'.');
+    else if (/Linux/.test(ua))    os = 'Linux';
+
+    // Browser
+    if (/MicroMessenger/.test(ua))     browser = '微信 ' + (ua.match(/MicroMessenger\/([\d.]+)/) || [])[1];
+    else if (/Edg\//.test(ua))         browser = 'Edge ' + (ua.match(/Edg\/([\d.]+)/) || [])[1];
+    else if (/Chrome\//.test(ua))      browser = 'Chrome ' + (ua.match(/Chrome\/([\d.]+)/) || [])[1];
+    else if (/Safari\//.test(ua))      browser = 'Safari ' + (ua.match(/Version\/([\d.]+)/) || [])[1];
+    else if (/Firefox\//.test(ua))     browser = 'Firefox ' + (ua.match(/Firefox\/([\d.]+)/) || [])[1];
+
+    // Device type
+    if (/Mobi|Android|iPhone|iPad/.test(ua)) device = '移动端';
+    else device = '桌面端';
+
+    // Screen
+    const screen = `${window.screen.width}×${window.screen.height}`;
+
+    return { device, os, browser, screen, ua: ua.substring(0, 150) };
+  }
+
   // ====== FORM SUBMIT ======
-  function handleSubmit() {
+  async function handleSubmit() {
     const nameEl    = document.getElementById('field-name');
     const phoneEl   = document.getElementById('field-phone');
     const careerEl  = document.getElementById('field-career');
@@ -1282,40 +1321,86 @@
     [nameEl, phoneEl, careerEl].forEach(el => el.classList.remove('error'));
     [errName, errPhone, errCareer].forEach(el => el.classList.remove('show'));
 
-    // 校验姓名
     if (!nameEl.value.trim()) {
-      nameEl.classList.add('error');
-      errName.classList.add('show');
-      valid = false;
+      nameEl.classList.add('error'); errName.classList.add('show'); valid = false;
     }
-    // 校验手机号
     const phoneVal = phoneEl.value.replace(/\s/g, '');
     if (!/^1[3-9]\d{9}$/.test(phoneVal)) {
-      phoneEl.classList.add('error');
-      errPhone.classList.add('show');
-      valid = false;
+      phoneEl.classList.add('error'); errPhone.classList.add('show'); valid = false;
     }
-    // 校验职业
     if (!careerEl.value) {
-      careerEl.classList.add('error');
-      errCareer.classList.add('show');
-      valid = false;
+      careerEl.classList.add('error'); errCareer.classList.add('show'); valid = false;
     }
-
     if (!valid) return;
 
-    // 提交
     btn.disabled = true;
     btn.innerHTML = '<span>⏳</span><span>提交中…</span>';
 
-    // 模拟提交（可接入云函数）
-    setTimeout(() => {
-      btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
+    // 收集信息
+    const now = new Date();
+    const submitTime = now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+    const dev = getDeviceInfo();
+    const careerMap = {
+      entrepreneur:'创业者/企业主', investor:'投资人/资方', tech:'技术从业者',
+      finance:'金融/财务', marketing:'市场/运营', government:'政府/事业单位',
+      media:'媒体/自媒体', student:'在校学生', other:'其他'
+    };
+
+    const issueTitle = `【报名】${nameEl.value.trim()} · ${submitTime}`;
+    const issueBody = [
+      '## 📋 报名信息',
+      '',
+      `| 字段 | 内容 |`,
+      `|------|------|`,
+      `| 👤 姓名 | ${nameEl.value.trim()} |`,
+      `| 📱 电话 | ${phoneVal} |`,
+      `| 💼 职业 | ${careerMap[careerEl.value] || careerEl.value} |`,
+      `| 🕐 提交时间 | ${submitTime} |`,
+      '',
+      '## 📱 设备信息',
+      '',
+      `| 字段 | 内容 |`,
+      `|------|------|`,
+      `| 设备类型 | ${dev.device} |`,
+      `| 操作系统 | ${dev.os} |`,
+      `| 浏览器 | ${dev.browser} |`,
+      `| 分辨率 | ${dev.screen} |`,
+      `| UA | \`${dev.ua}\` |`,
+    ].join('\n');
+
+    try {
+      const res = await fetch(`${API_BASE}/repos/${GH_OWNER}/${GH_REPO}/issues`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify({
+          access_token: GH_TOKEN,
+          title: issueTitle,
+          body: issueBody,
+          labels: '报名'
+        })
+      });
+
+      if (res.ok) {
+        btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
+        const toast = document.getElementById('toast');
+        toast.textContent = '🎉 报名成功，期待您准时参加！';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3500);
+        // 清空表单
+        nameEl.value = ''; phoneEl.value = ''; careerEl.value = '';
+      } else {
+        throw new Error('submit failed');
+      }
+    } catch(e) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>✅</span><span>准时参加</span>';
       const toast = document.getElementById('toast');
-      toast.textContent = '🎉 报名成功，期待您准时参加！';
+      toast.textContent = '⚠️ 提交失败，请稍后重试';
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3500);
-    }, 1000);
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
   }
 
   // ====== PARTICLE CANVAS ======
