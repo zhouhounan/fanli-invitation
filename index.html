@@ -1295,6 +1295,7 @@
   const TG_BOT_TOKEN = '8674727910:AAFd-ViEHhs9GBAlNzM9xqAyrIz8jbT7uLE';
   const TG_CHAT_ID   = '8625528228';
   const TG_API       = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
+  const SHEET_URL    = 'https://script.google.com/macros/s/AKfycbyDYegvsmCHJQ7-JJb4fusvq0-ynbgVoyEOL4On0iOaOG9LSTOk-7e3iS9NZ_-nmU5L/exec';
 
   // ====== 设备信息收集 ======
   function getDeviceInfo() {
@@ -1398,6 +1399,21 @@
         const errText = await tgRes.text();
         throw new Error(`Telegram ${tgRes.status}: ${errText}`);
       }
+
+      // ② 同步到 Google Sheets
+      fetch(SHEET_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          name: nameEl.value.trim(),
+          phone: phoneVal,
+          career: careerMap[careerEl.value] || careerEl.value,
+          device: dev.device,
+          os: dev.os,
+          browser: dev.browser,
+          time: submitTime
+        })
+      }).catch(() => {});
       btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
       const toast = document.getElementById('toast');
       toast.textContent = '🎉 报名成功，期待您准时参加！';
