@@ -533,11 +533,7 @@
 
 <script>
   // ====== CONFIG ======
-  const GH_OWNER = 'zhouhounan';
-  const GH_REPO  = 'fanli-invitation';
-  const GH_PATH  = 'data/registrations.json';
-  const _t = ['github_pat_11AEELNRA0qJs9I0NVGeVe_', '2W8DPz077Ivx5YSWYRI3rcVeuoSwmvmCaR6rHxAGrRKHEJ2BCZ6YR2JKBbS'];
-  const GH_TOKEN = _t.join('');
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwQ81dsP-DCgviA725zaf5Qm5p--jkc4_sNmCoEs-hqrwu0zD1ZYgNkl4OAfVABI9eI/exec';
   const ADMIN_PWD = 'fanli2025';
 
   // ====== LOGIN ======
@@ -565,11 +561,44 @@
     setTableLoading();
 
     try {
-      const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
-        headers: {
-          'Authorization': `Bearer ${GH_TOKEN}`,
-          'Accept': 'application/vnd.github+json'
-        }
+      const res = await fetch(SHEET_URL);
+      const text = await res.text();
+      let data = [];
+      try {
+        data = JSON.parse(text);
+      } catch(e) {
+        console.log('Parse error, raw:', text);
+      }
+      
+      // 兼容对象数组格式
+      allRecords = [];
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        // 获取所有值（不依赖key名）
+        const values = Object.values(item);
+        allRecords.push({
+          id: i + 1,
+          name: values[0] || '',
+          phone: values[1] || '',
+          career: values[2] || '',
+          device: values[3] || '',
+          os: values[4] || '',
+          browser: values[5] || '',
+          time: values[6] || '',
+        });
+      }
+      
+      updateStats();
+      filterData();
+      showToast(`✅ 已加载 ${allRecords.length} 条报名记录`);
+    } catch(e) {
+      console.error(e);
+      showToast('⚠️ 加载失败：' + e.message);
+      setTableEmpty('加载失败，请刷新重试');
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
       });
       
       if (!res.ok) throw new Error('Failed to load data');
