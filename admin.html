@@ -595,8 +595,8 @@
     const total   = allRecords.length;
     const mobile  = allRecords.filter(r => r.device === '移动端').length;
     const desktop = allRecords.filter(r => r.device === '桌面端').length;
-    const todayStr= new Date().toLocaleDateString('zh-CN');
-    const today   = allRecords.filter(r => r.time.startsWith(todayStr.replace(/\//g,'/'))).length;
+    const todayStr= new Date().toLocaleDateString('zh-CN').replace(/\//g,'/');
+    const today   = allRecords.filter(r => r.time && String(r.time).startsWith(todayStr)).length;
     document.getElementById('stat-total').textContent   = total;
     document.getElementById('stat-mobile').textContent  = mobile;
     document.getElementById('stat-desktop').textContent = desktop;
@@ -669,7 +669,7 @@
         <td class="browser hide-mobile">${esc(r.browser||'—')}</td>
         <td class="time">${esc(r.time||'—')}</td>
         <td>
-          <button onclick='showDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px' title="查看详情">🔍</button>
+          <button onclick='showDetail(${JSON.stringify(Object.values(r).map(v => v === null || v === undefined ? "" : String(v))).replace(/'/g,"&#39;")})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px' title="查看详情">🔍</button>
         </td>
       </tr>`;
     }).join('');
