@@ -505,7 +505,7 @@
           <th class="hide-mobile" onclick="sortBy('os')">系统 <span class="sort-icon" id="sort-os">↕</span></th>
           <th class="hide-mobile" onclick="sortBy('browser')">浏览器 <span class="sort-icon" id="sort-browser">↕</span></th>
           <th onclick="sortBy('time')">提交时间 <span class="sort-icon" id="sort-time">↓</span></th>
-          <th style="width:60px">详情</th>
+          <th style="width:90px">操作</th>
         </tr>
       </thead>
       <tbody id="table-body">
@@ -705,7 +705,10 @@
         <td class="os hide-mobile">${esc(r.os||'—')}</td>
         <td class="browser hide-mobile">${esc(r.browser||'—')}</td>
         <td class="time">${esc(r.time||'—')}</td>
-        <td><button onclick='showDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px'>🔍</button></td>
+        <td>
+          <button onclick='showDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px' title="查看详情">🔍</button>
+          <button onclick='deleteRecord(${r.id})' style='background:none;border:none;cursor:pointer;font-size:16px;padding:4px;color:#f85149' title="删除">🗑️</button>
+        </td>
       </tr>`;
     }).join('');
 
@@ -785,6 +788,39 @@
     a.download = `报名数据_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.csv`;
     a.click();
     showToast(`✅ 已导出 ${allRecords.length} 条数据`);
+  }
+
+  // ====== DELETE ======
+  async function deleteRecord(id) {
+    if (!confirm('确定要删除这条报名记录吗？此操作不可恢复。')) return;
+    
+    try {
+      showToast('正在删除...');
+      const url = `${API}/repos/${OWNER}/${REPO}/issues/${id}`;
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${TOKEN}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          state: 'closed',
+          state_reason: 'not_planned'
+        })
+      });
+      
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`${res.status} ${res.statusText}: ${errText}`);
+      }
+      
+      showToast('✅ 删除成功');
+      loadData();
+    } catch(e) {
+      showToast('⚠️ 删除失败：' + e.message);
+    }
   }
 
   // ====== UTILS ======
