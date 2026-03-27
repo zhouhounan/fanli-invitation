@@ -535,8 +535,7 @@
 
 <script>
   // ====== CONFIG ======
-  const TG_BOT_TOKEN = '8674727910:AAFd-ViEHhs9GBAlNzM9xqAyrIz8jbT7uLE';
-  const TG_API       = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwQ81dsP-DCgviA725zaf5Qm5p--jkc4_sNmCoEs-hqrwu0zD1ZYgNkl4OAfVABI9eI/exec';
   const ADMIN_PWD = 'fanli2025';   // ← 后台访问密码，可自行修改
 
   // ====== LOGIN ======
@@ -564,45 +563,29 @@
     setTableLoading();
 
     try {
-      const res = await fetch(`${TG_API}/getUpdates`);
-      const data = await res.json();
+      const res = await fetch(SHEET_URL);
+      const text = await res.text();
+      let data = [];
+      try {
+        data = JSON.parse(text);
+      } catch(e) {
+        console.log('Parse error, raw:', text);
+      }
       
-      if (!data.ok) throw new Error(data.description || 'API error');
-      
-      const messages = data.result
-        .filter(m => m.message && m.message.text)
-        .map(m => {
-          const text = m.message.text;
-          const lines = text.split('\n');
-          const item = {};
-          lines.forEach(line => {
-            const match = line.match(/^(.+?)[:：]\s*(.*)$/);
-            if (match) {
-              const key = match[1].replace(/[📋👤📱💼🖥️🌐🕐🔢]/g, '').trim();
-              const val = match[2].trim();
-              if (key === '姓名') item.name = val;
-              if (key === '电话') item.phone = val;
-              if (key === '职业') item.career = val;
-              if (key === '设备') item.device = val;
-              if (key === '系统') item.os = val;
-              if (key === '浏览器') item.browser = val;
-              if (key === '时间') item.time = val;
-            }
-          });
-          return item;
-        })
-        .filter(item => item.name);
-      
-      allRecords = messages.map((item, idx) => ({
-        id: idx + 1,
-        name: item.name || '',
-        phone: item.phone || '',
-        career: item.career || '',
-        device: item.device || '',
-        os: item.os || '',
-        browser: item.browser || '',
-        time: item.time || '',
-      }));
+      allRecords = [];
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        allRecords.push({
+          id: i + 1,
+          name: item[0] || '',
+          phone: item[1] || '',
+          career: item[2] || '',
+          device: item[3] || '',
+          os: item[4] || '',
+          browser: item[5] || '',
+          time: item[6] || '',
+        });
+      }
       
       updateStats();
       filterData();
