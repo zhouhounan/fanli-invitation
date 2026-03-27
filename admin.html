@@ -564,23 +564,27 @@
 
     try {
       const res = await fetch(SHEET_URL);
-      const data = await res.json();
+      const text = await res.text();
+      console.log('Raw response:', text);
+      const data = JSON.parse(text);
+      console.log('Parsed data:', data);
       
       allRecords = data.map((item, idx) => ({
         id: idx + 1,
-        name: item['姓名'] || '',
-        phone: item['电话'] || '',
-        career: item['职业'] || '',
-        device: item['设备'] || '',
-        os: item['系统'] || '',
-        browser: item['浏览器'] || '',
-        time: item['时间'] || '',
+        name: item['姓名'] || item['name'] || '',
+        phone: item['电话'] || item['phone'] || '',
+        career: item['职业'] || item['career'] || '',
+        device: item['设备'] || item['device'] || '',
+        os: item['系统'] || item['os'] || '',
+        browser: item['浏览器'] || item['browser'] || '',
+        time: item['时间'] || item['time'] || '',
       }));
       
       updateStats();
       filterData();
       showToast(`✅ 已加载 ${allRecords.length} 条报名记录`);
     } catch(e) {
+      console.error('Load error:', e);
       showToast('⚠️ 加载失败：' + e.message);
       setTableEmpty('加载失败，请刷新重试');
     } finally {
