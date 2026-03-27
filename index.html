@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>消费筑产权·链上享未来 — 范蠡消费互联网共创研讨会</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --gold-dark: #8a6820;
+      --deep-blue: #0a0e1a;
+      --mid-blue: #111827;
+      --panel: rgba(255,255,255,0.04);
+      --border: rgba(201,168,76,0.25);
+      --text-main: #f0e6cc;
+      --text-muted: rgba(240,230,204,0.6);
+      --accent-teal: #1de9b6;
+      --accent-purple: #7c3aed;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%;
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--deep-blue);
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    /* ========== APP SHELL ========== */
+    #app {
+      width: 100vw; height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ========== PAGES ========== */
+    .page {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.4,0,0.2,1);
+      transform: translateY(30px);
+      -webkit-overflow-scrolling: touch;
+    }
+    .page.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateY(0);
+    }
+    .page.exit-up {
+      opacity: 0;
+      transform: translateY(-30px);
+      pointer-events: none;
+    }
+
+    /* ========== BACKGROUND ========== */
+    .bg-canvas {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      background: radial-gradient(ellipse at 20% 20%, #1a1040 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 80%, #0d1f35 0%, transparent 50%),
+                  var(--deep-blue);
+    }
+    .bg-canvas canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0.4;
+    }
+
+    /* ========== SCROLLBAR ========== */
+    .page::-webkit-scrollbar { width: 3px; }
+    .page::-webkit-scrollbar-track { background: transparent; }
+    .page::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 3px; }
+
+    /* ========== NAV DOTS ========== */
+    #nav-dots {
+      position: fixed;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .nav-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid var(--gold);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .nav-dot.active {
+      background: var(--gold);
+      transform: scale(1.3);
+    }
+    .nav-dot-label {
+      position: absolute;
+      right: 20px;
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--gold);
+      opacity: 0;
+      transition: opacity 0.2s;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    /* ========== BOTTOM NAV ========== */
+    #bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      background: rgba(10,14,26,0.92);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .bnav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 4px 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bnav-item .icon {
+      font-size: 20px;
+      margin-bottom: 3px;
+      transition: transform 0.3s;
+    }
+    .bnav-item span {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: color 0.3s;
+    }
+    .bnav-item.active .icon { transform: scale(1.2); }
+    .bnav-item.active span { color: var(--gold); }
+
+    /* ========== COMMON ========== */
+    .page-content {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      padding: 0 20px 100px;
+    }
+
+    .gold-line {
+      width: 40px; height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      margin: 12px 0;
+    }
+    .gold-line.center { margin: 12px auto; background: linear-gradient(90deg, transparent, var(--gold), transparent); width: 60px; }
+
+    .section-tag {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: 2px;
+      background: rgba(201,168,76,0.08);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 14px;
+      backdrop-filter: blur(6px);
+    }
+
+    /* ========== PAGE 1: COVER ========== */
+    #page-cover {
+      justify-content: center;
+      background: transparent;
+    }
+    #page-cover .page-content {
+      padding: 0 24px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .cover-seal {
+      width: 70px; height: 70px;
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      position: relative;
+      animation: sealPulse 3s ease-in-out infinite;
+    }
+    .cover-seal::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 50%;
+      animation: sealRing 4s linear infinite;
+    }
+    .cover-seal .seal-text {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 18px;
+      color: var(--gold);
+      text-align: center;
+      line-height: 1.2;
+    }
+    @keyframes sealPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.4); }
+      50% { box-shadow: 0 0 0 12px rgba(201,168,76,0); }
+    }
+    @keyframes sealRing {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .cover-eyebrow {
+      text-align: center;
+      font-size: 12px;
+      letter-spacing: 4px;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+
+    .cover-title {
+      text-align: center;
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+    .cover-title .em {
+      color: var(--gold);
+      font-size: 32px;
+    }
+
+    .cover-subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin-bottom: 32px;
+      line-height: 1.8;
+    }
+
+    .cover-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .cover-divider .line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dark));
+    }
+    .cover-divider .line:last-child {
+      background: linear-gradient(90deg, var(--gold-dark), transparent);
+    }
+    .cover-divider .diamond {
+      width: 6px; height: 6px;
+      background: var(--gold);
+      transform: rotate(45deg);
+    }
+
+    .cover-meta {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      backdrop-filter: blur(8px);
+    }
+    .cover-meta-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(201,168,76,0.1);
+    }
+    .cover-meta-row:last-child { border-bottom: none; }
+    .cover-meta-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .cover-meta-label {
+      font-size: 11px;
+      color: var(--gold);
+      min-width: 44px;
+    }
+    .cover-meta-value {
+      font-size: 13px;
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+
+    .cover-dear {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .cover-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 28px;
+      color: var(--text-muted);
+      font-size: 12px;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    /* ========== PAGE 2: AGENDA ========== */
+    .page-header {
+      padding: 60px 0 24px;
+    }
+    .page-title {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--text-main);
+      margin: 8px 0 4px;
+    }
+    .page-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-top: 8px;
+    }
+
+    .agenda-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .agenda-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+      border-radius: 3px 0 0 3px;
+    }
+    .agenda-num {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 28px;
+      color: rgba(201,168,76,0.2);
+      font-weight: 900;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 32px;
+    }
+    .agenda-content { flex: 1; }
+    .agenda-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .agenda-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .agenda-tag {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 6px;
+    }
+    .tag-release { background: rgba(29,233,182,0.12); color: var(--accent-teal); border: 1px solid rgba(29,233,182,0.3); }
+    .tag-strategy { background: rgba(201,168,76,0.1); color: var(--gold); border: 1px solid var(--border); }
+    .tag-demo { background: rgba(124,58,237,0.12); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+    .tag-vision { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+    /* ========== PAGE 3: VALUE ========== */
+    .value-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .value-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 14px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .value-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0.5;
+    }
+    .value-icon { font-size: 28px; margin-bottom: 8px; display: block; }
+    .value-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .value-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .vision-box {
+      background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(29,233,182,0.05));
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 12px;
+      padding: 22px 20px;
+      margin: 16px 0;
+      position: relative;
+    }
+    .vision-box::before {
+      content: '"';
+      position: absolute;
+      top: -10px; left: 16px;
+      font-size: 60px;
+      color: var(--gold);
+      opacity: 0.2;
+      font-family: serif;
+      line-height: 1;
+    }
+    .vision-text {
+      font-size: 14px;
+      line-height: 2;
+      color: var(--text-main);
+    }
+    .vision-text .highlight {
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .vision-text .em-teal {
+      color: var(--accent-teal);
+      font-weight: 600;
+    }
+
+    /* ========== PAGE 4: ABOUT ========== */
+    .ecosystem-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .eco-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .eco-icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .eco-icon-1 { background: rgba(29,233,182,0.1); border: 1px solid rgba(29,233,182,0.3); }
+    .eco-icon-2 { background: rgba(201,168,76,0.1); border: 1px solid var(--border); }
+    .eco-icon-3 { background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3); }
+    .eco-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .eco-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .tech-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .tech-feat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tech-feat .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-teal { background: var(--accent-teal); box-shadow: 0 0 8px var(--accent-teal); }
+    .dot-gold { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+    .tech-feat span { font-size: 12px; color: var(--text-main); }
+
+    /* ========== PAGE 5: INFO + RSVP ========== */
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin: 16px 0;
+    }
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(201,168,76,0.1);
+    }
+    .info-row:first-child { padding-top: 0; }
+    .info-row:last-child { border-bottom: none; }
+    .info-icon {
+      width: 36px; height: 36px;
+      background: rgba(201,168,76,0.1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .info-label {
+      font-size: 11px;
+      color: var(--gold);
+      margin-bottom: 2px;
+    }
+    .info-value {
+      font-size: 14px;
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+    .info-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .rsvp-box {
+      background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(29,233,182,0.06));
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 14px;
+      padding: 24px 20px;
+      margin: 16px 0;
+      text-align: center;
+    }
+    .rsvp-title {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 22px;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .rsvp-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .btn-rsvp {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--deep-blue);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 40px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s;
+      letter-spacing: 1px;
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+    .btn-rsvp:active { transform: scale(0.97); opacity: 0.9; }
+
+    .closing-text {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.9;
+      padding: 20px 10px;
+    }
+    .closing-sig {
+      text-align: center;
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 16px;
+      color: var(--gold);
+      margin-top: 8px;
+    }
+
+    /* ========== PARTICLE CANVAS ========== */
+    #particle-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ========== TOAST ========== */
+    #toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(201,168,76,0.95);
+      color: var(--deep-blue);
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.4s;
+      z-index: 999;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ========== LOADING ========== */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--deep-blue);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+      transition: opacity 0.5s ease;
+    }
+    #loading.hide { opacity: 0; pointer-events: none; }
+    .loading-seal {
+      width: 60px; height: 60px;
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-family: 'ZCOOL XiaoWei', serif;
+      font-size: 14px;
+      color: var(--gold);
+      letter-spacing: 3px;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (min-width: 480px) {
+      .page-content { padding: 0 32px 100px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="loading-seal"></div>
+  <div class="loading-text">邀请函加载中…</div>
+</div>
+
+<!-- Background -->
+<div class="bg-canvas">
+  <canvas id="particle-canvas"></canvas>
+</div>
+
+<!-- Toast -->
+<div id="toast">✅ 已成功报名，期待相聚！</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- ====== PAGE 1: COVER ====== -->
+  <div class="page active" id="page-cover">
+    <div class="page-content">
+      <div class="cover-seal">
+        <div class="seal-text">范蠡<br>会议</div>
+      </div>
+
+      <div class="cover-eyebrow">诚挚邀请您出席</div>
+
+      <h1 class="cover-title">
+        <span class="em">消费筑产权</span><br>
+        链上享未来
+      </h1>
+
+      <div class="cover-subtitle">
+        范蠡消费互联网共创研讨会<br>
+        <span style="font-size:11px;letter-spacing:2px;">FAN LI CONSUMER INTERNET SUMMIT</span>
+      </div>
+
+      <div class="cover-divider">
+        <div class="line"></div>
+        <div class="diamond"></div>
+        <div class="line"></div>
+      </div>
+
+      <p class="cover-dear">尊敬的先生/女士：</p>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;text-align:center;margin-bottom:24px;">
+        在数字经济时代浪潮奔涌之际，本次研讨会将深度融合中国传统的范蠡商道智慧与前沿的区块链Web3技术，为您系统呈现一个合法合规、透明可信、长期稳健的数字经济新范式。
+      </p>
+
+      <div class="cover-meta">
+        <div class="cover-meta-row">
+          <span class="cover-meta-icon">📅</span>
+          <span class="cover-meta-label">时间</span>
+          <span class="cover-meta-value">本周六 14:30 — 17:00</span>
+        </div>
+        <div class="cover-meta-row">
+          <span class="cover-meta-icon">📍</span>
+          <span class="cover-meta-label">地点</span>
+          <span class="cover-meta-value">南山区工勘大厦 25F · 范蠡书院</span>
+        </div>
+        <div class="cover-meta-row">
+          <span class="cover-meta-icon">🔒</span>
+          <span class="cover-meta-label">类型</span>
+          <span class="cover-meta-value">合伙人闭门会议 · 凝聚共识，汇聚力量</span>
+        </div>
+      </div>
+
+      <div class="cover-cta">
+        <span>向下滑动探索</span>
+        <span>↓</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PAGE 2: AGENDA ====== -->
+  <div class="page" id="page-agenda">
+    <div class="page-content">
+      <div class="page-header">
+        <span class="section-tag">AGENDA</span>
+        <h2 class="page-title">核心发布与研讨</h2>
+        <div class="gold-line"></div>
+        <p class="page-desc">我们将正式发布并深入解读三大核心体系与战略规划，为您呈现范蠡数字生态的完整蓝图。</p>
+      </div>
+
+      <div class="agenda-item">
+        <div class="agenda-num">01</div>
+        <div class="agenda-content">
+          <div class="agenda-title">三大核心体系发布</div>
+          <div class="agenda-desc">正式发布范蠡联盟链、共有制数字人民公社、"消费即养老"三大创新模式，全面开启数字经济新纪元。</div>
+          <span class="agenda-tag tag-release">核心发布</span>
+        </div>
+      </div>
+
+      <div class="agenda-item">
+        <div class="agenda-num">02</div>
+        <div class="agenda-content">
+          <div class="agenda-title">战略规划深度解读</div>
+          <div class="agenda-desc">全面阐述三个五年发展战略蓝图，明确路径节点与价值预期，共绘数字经济发展路线图。</div>
+          <span class="agenda-tag tag-strategy">战略规划</span>
+        </div>
+      </div>
+
+      <div class="agenda-item">
+        <div class="agenda-num">03</div>
+        <div class="agenda-content">
+          <div class="agenda-title">顶层架构系统解析</div>
+          <div class="agenda-desc">系统解析范蠡生态"本、虚、实"三位一体的顶层设计逻辑，揭示底层运作机制。</div>
+          <span class="agenda-tag tag-strategy">架构设计</span>
+        </div>
+      </div>
+
+      <div class="agenda-item">
+        <div class="agenda-num">04</div>
+        <div class="agenda-content">
+          <div class="agenda-title">功能现场演示</div>
+          <div class="agenda-desc">真实演示基于区块链技术的核心应用，包括链上分布式记账流程及个人数据资产实时查询与追溯。</div>
+          <span class="agenda-tag tag-demo">现场Demo</span>
+        </div>
+      </div>
+
+      <div class="agenda-item">
+        <div class="agenda-num">05</div>
+        <div class="agenda-content">
+          <div class="agenda-title">圆桌共创与愿景分享</div>
+          <div class="agenda-desc">凝聚核心合伙人共识，共同探讨消费互联网新生态建设路径，汇聚合力共创未来。</div>
+          <span class="agenda-tag tag-vision">圆桌共创</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PAGE 3: VALUE ====== -->
+  <div class="page" id="page-value">
+    <div class="page-content">
+      <div class="page-header">
+        <span class="section-tag">INNOVATION</span>
+        <h2 class="page-title">创新价值解读</h2>
+        <div class="gold-line"></div>
+        <p class="page-desc">研讨会深度聚焦以下行业创新模式，探讨其落地路径与长远价值。</p>
+      </div>
+
+      <div class="value-grid">
+        <div class="value-card">
+          <span class="value-icon">💎</span>
+          <div class="value-title">消费数据资产化</div>
+          <div class="value-desc">让日常消费数据转化为可确权的个人资产</div>
+        </div>
+        <div class="value-card">
+          <span class="value-icon">📊</span>
+          <div class="value-title">数字股票确权</div>
+          <div class="value-desc">探索消费价值共享与权益分配的新机制</div>
+        </div>
+        <div class="value-card">
+          <span class="value-icon">🌿</span>
+          <div class="value-title">养老储备无感化</div>
+          <div class="value-desc">将消费行为自然转化为未来的养老保障</div>
+        </div>
+        <div class="value-card">
+          <span class="value-icon">⛓️</span>
+          <div class="value-title">联盟链生态</div>
+          <div class="value-desc">合规合法的区块链底层技术支撑体系</div>
+        </div>
+      </div>
+
+      <div class="vision-box">
+        <div class="vision-text">
+          我们坚信，数据是未来的核心资产，消费是全民的天然权利。我们致力于通过区块链技术与共有制模式，构建<span class="highlight">"人人参与、人人共建、人人共享"</span>的数字人民公社，重新定义消费价值——<span class="em-teal">让每一次消费，从支出变为可增值、可传承的数字资产，让数据价值真正回归于民。</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:12px;">📡 技术演示亮点</div>
+        <div class="tech-features">
+          <div class="tech-feat">
+            <div class="dot dot-teal"></div>
+            <span>链上分布式记账</span>
+          </div>
+          <div class="tech-feat">
+            <div class="dot dot-gold"></div>
+            <span>数据资产实时查询</span>
+          </div>
+          <div class="tech-feat">
+            <div class="dot dot-teal"></div>
+            <span>个人资产追溯</span>
+          </div>
+          <div class="tech-feat">
+            <div class="dot dot-gold"></div>
+            <span>消费权益确权</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PAGE 4: ECOSYSTEM ====== -->
+  <div class="page" id="page-ecosystem">
+    <div class="page-content">
+      <div class="page-header">
+        <span class="section-tag">ECOSYSTEM</span>
+        <h2 class="page-title">范蠡生态体系</h2>
+        <div class="gold-line"></div>
+        <p class="page-desc">三位一体的数字生态架构，以"本、虚、实"为核心，构建可持续的消费互联网新范式。</p>
+      </div>
+
+      <div class="ecosystem-list">
+        <div class="eco-item">
+          <div class="eco-icon-wrap eco-icon-1">🔗</div>
+          <div>
+            <div class="eco-title">范蠡联盟链</div>
+            <div class="eco-desc">以区块链底层技术为基础，构建合法合规、去中心化的数据可信网络，保障每一笔消费数据的真实性与不可篡改性，实现价值的永久存证。</div>
+          </div>
+        </div>
+        <div class="eco-item">
+          <div class="eco-icon-wrap eco-icon-2">🏛️</div>
+          <div>
+            <div class="eco-title">共有制数字人民公社</div>
+            <div class="eco-desc">借鉴中国传统集体智慧，以现代数字技术重构共有制模型，让每位参与者既是建设者，也是受益者，实现消费价值的共建共享。</div>
+          </div>
+        </div>
+        <div class="eco-item">
+          <div class="eco-icon-wrap eco-icon-3">🌱</div>
+          <div>
+            <div class="eco-title">"消费即养老"创新模式</div>
+            <div class="eco-desc">创新性地将日常消费行为与养老储备无缝结合，通过积累消费数字资产，实现"消费即投资、投资即养老"的长期价值沉淀。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="font-size:18px;">🏺</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--gold);">范蠡商道</div>
+            <div style="font-size:11px;color:var(--text-muted);">传统智慧 × 数字创新</div>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.8;">
+          范蠡，中国古代著名商人与思想家，以"三聚三散"的商道智慧流传千古。本次研讨会以范蠡精神为魂，将古代商道哲学与Web3前沿技术深度融合，开创中国特色的数字经济新路径。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PAGE 5: INFO & RSVP ====== -->
+  <div class="page" id="page-info">
+    <div class="page-content">
+      <div class="page-header">
+        <span class="section-tag">INFO & RSVP</span>
+        <h2 class="page-title">会议信息 & 报名</h2>
+        <div class="gold-line"></div>
+      </div>
+
+      <div class="card">
+        <div class="info-list">
+          <div class="info-row">
+            <div class="info-icon">📅</div>
+            <div>
+              <div class="info-label">会议时间</div>
+              <div class="info-value">本周六 14:30 — 17:00</div>
+              <div class="info-note">建议提前15分钟到场签到</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon">📍</div>
+            <div>
+              <div class="info-label">会议地点</div>
+              <div class="info-value">南山区工勘大厦 25F</div>
+              <div class="info-note">范蠡书院 · 深圳市南山区</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon">🎯</div>
+            <div>
+              <div class="info-label">会议主题</div>
+              <div class="info-value">消费筑产权 · 链上享未来</div>
+              <div class="info-note">范蠡消费互联网共创研讨会</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon">🔐</div>
+            <div>
+              <div class="info-label">参会范围</div>
+              <div class="info-value">合伙人闭门会议</div>
+              <div class="info-note">旨在凝聚共识，汇聚力量</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rsvp-box">
+        <div class="rsvp-title">✨ 确认出席</div>
+        <div class="rsvp-desc">
+          名额有限，期待您的莅临<br>
+          您的参与，是对未来最有力的投票
+        </div>
+        <button class="btn-rsvp" onclick="handleRSVP()">
+          <span>🤝</span>
+          <span>立即确认出席</span>
+        </button>
+      </div>
+
+      <div class="closing-text">
+        我们期待与您共同探讨，携手打造下一代公平、透明、共享的消费互联网新生态。<br><br>
+        感谢您的信任与支持，期待与您相见。
+      </div>
+      <div class="closing-sig">— 范蠡消费互联网团队</div>
+
+      <div style="height:20px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div id="bottom-nav">
+  <div class="bnav-item active" data-page="0" onclick="goTo(0)">
+    <div class="icon">📜</div>
+    <span>邀请函</span>
+  </div>
+  <div class="bnav-item" data-page="1" onclick="goTo(1)">
+    <div class="icon">📋</div>
+    <span>议程</span>
+  </div>
+  <div class="bnav-item" data-page="2" onclick="goTo(2)">
+    <div class="icon">💡</div>
+    <span>价值</span>
+  </div>
+  <div class="bnav-item" data-page="3" onclick="goTo(3)">
+    <div class="icon">🌐</div>
+    <span>生态</span>
+  </div>
+  <div class="bnav-item" data-page="4" onclick="goTo(4)">
+    <div class="icon">🎫</div>
+    <span>报名</span>
+  </div>
+</div>
+
+<script>
+  // ====== PAGE NAVIGATION ======
+  const pages = ['page-cover','page-agenda','page-value','page-ecosystem','page-info'];
+  let currentPage = 0;
+  let isAnimating = false;
+
+  function goTo(index) {
+    if (index === currentPage || isAnimating) return;
+    isAnimating = true;
+    
+    const oldPage = document.getElementById(pages[currentPage]);
+    const newPage = document.getElementById(pages[index]);
+    
+    oldPage.classList.add('exit-up');
+    oldPage.classList.remove('active');
+    
+    setTimeout(() => {
+      oldPage.classList.remove('exit-up');
+      oldPage.scrollTop = 0;
+      newPage.classList.add('active');
+      setTimeout(() => { isAnimating = false; }, 600);
+    }, 300);
+    
+    // Update nav
+    document.querySelectorAll('.bnav-item').forEach((el, i) => {
+      el.classList.toggle('active', i === index);
+    });
+    
+    currentPage = index;
+  }
+
+  // ====== SWIPE SUPPORT ======
+  let touchStartY = 0;
+  let touchStartX = 0;
+  
+  document.getElementById('app').addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  
+  document.getElementById('app').addEventListener('touchend', e => {
+    const page = document.getElementById(pages[currentPage]);
+    const dy = touchStartY - e.changedTouches[0].clientY;
+    const dx = Math.abs(touchStartX - e.changedTouches[0].clientX);
+    
+    // Only swipe if horizontal dominates and short vertical
+    if (Math.abs(dy) > 60 && dx < 40) {
+      const atTop = page.scrollTop <= 0;
+      const atBottom = page.scrollTop + page.clientHeight >= page.scrollHeight - 5;
+      
+      if (dy > 0 && atBottom) {
+        goTo(Math.min(currentPage + 1, pages.length - 1));
+      } else if (dy < 0 && atTop) {
+        goTo(Math.max(currentPage - 1, 0));
+      }
+    }
+  }, { passive: true });
+
+  // ====== RSVP ======
+  function handleRSVP() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2800);
+  }
+
+  // ====== PARTICLE CANVAS ======
+  (function() {
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let W, H;
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = (Math.random() - 0.5) * 0.3;
+        this.r = Math.random() * 1.5 + 0.5;
+        this.alpha = Math.random() * 0.5 + 0.1;
+        this.color = Math.random() > 0.5 ? '#c9a84c' : '#1de9b6';
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.alpha;
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+    function animate() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+
+      // Draw connections
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 100) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = 'rgba(201,168,76,0.06)';
+            ctx.lineWidth = 0.5;
+            ctx.globalAlpha = 1 - dist / 100;
+            ctx.stroke();
+          }
+        }
+      }
+
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animate);
+    }
+    animate();
+  })();
+
+  // ====== LOADING ======
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('hide');
+    }, 1200);
+  });
+</script>
+</body>
+</html>
