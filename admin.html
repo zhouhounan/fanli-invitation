@@ -757,7 +757,8 @@
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
   function maskPhone(p) {
-    return p ? p.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '—';
+    const s = String(p || '');
+    return s ? s.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '—';
   }
   function showToast(msg) {
     const t = document.getElementById('toast');
