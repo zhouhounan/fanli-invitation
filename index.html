@@ -1267,10 +1267,12 @@
   }, { passive: true });
 
   // ====== CONFIG ======
-  const GH_TOKEN  = 'de3fedd48e99052c579b24a9b30b6b3d';   // Gitee 私人令牌
-  const GH_OWNER  = 'zhouhounan';
-  const GH_REPO   = 'fanli-invitation';
-  const API_BASE  = 'https://gitee.com/api/v5';
+  const GITEE_TOKEN  = 'de3fedd48e99052c579b24a9b30b6b3d'; // Gitee 私人令牌
+  const GITEE_OWNER  = 'zhouhounan';
+  const GITEE_REPO   = 'fanli-invitation';
+  const GITEE_API    = 'https://gitee.com/api/v5';
+  // Server酱 SendKey（微信通知）：登录 https://sct.ftqq.com 后填入
+  const SERVERCHAN_KEY = 'REPLACE_WITH_SENDKEY'; // 如 SCTxxxxxxxx
 
   // ====== 设备信息收集 ======
   function getDeviceInfo() {
@@ -1369,31 +1371,50 @@
     ].join('\n');
 
     try {
-      const res = await fetch(`${API_BASE}/repos/${GH_OWNER}/${GH_REPO}/issues`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json;charset=UTF-8'
-        },
-        body: JSON.stringify({
-          access_token: GH_TOKEN,
-          title: issueTitle,
-          body: issueBody,
-          labels: '报名'
-        })
-      });
-
-      if (res.ok) {
-        btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
-        const toast = document.getElementById('toast');
-        toast.textContent = '🎉 报名成功，期待您准时参加！';
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 3500);
-        // 清空表单
-        nameEl.value = ''; phoneEl.value = ''; careerEl.value = '';
-      } else {
-        throw new Error('submit failed');
+      // ① 存档到 Gitee Issues（token 必须放 URL query 参数）
+      const giteeRes = await fetch(
+        `${GITEE_API}/repos/${GITEE_OWNER}/${GITEE_REPO}/issues?access_token=${GITEE_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+          body: JSON.stringify({
+            title: issueTitle,
+            body:  issueBody,
+            labels: '报名'
+          })
+        }
+      );
+      if (!giteeRes.ok) {
+        const errText = await giteeRes.text();
+        throw new Error(`Gitee ${giteeRes.status}: ${errText}`);
       }
+
+      // ② 微信通知（Server酱，仅在填写了 SendKey 时触发）
+      if (SERVERCHAN_KEY && SERVERCHAN_KEY !== 'REPLACE_WITH_SENDKEY') {
+        const wxTitle = encodeURIComponent(`📋 新报名：${nameEl.value.trim()}`);
+        const wxMsg   = encodeURIComponent(
+          `姓名：${nameEl.value.trim()}\n` +
+          `电话：${phoneVal}\n` +
+          `职业：${careerMap[careerEl.value] || careerEl.value}\n` +
+          `设备：${dev.device} · ${dev.os}\n` +
+          `时间：${submitTime}`
+        );
+        // 使用 no-cors，微信通知只管发出，不等响应
+        fetch(`https://sctapi.ftqq.com/${SERVERCHAN_KEY}.send?title=${wxTitle}&desp=${wxMsg}`, {
+          method: 'GET', mode: 'no-cors'
+        }).catch(() => {});
+      }
+
+      // ③ 成功反馈
+      btn.innerHTML = '<span>🎉</span><span>报名成功！</span>';
+      const toast = document.getElementById('toast');
+      toast.textContent = '🎉 报名成功，期待您准时参加！';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+      nameEl.value = ''; phoneEl.value = ''; careerEl.value = '';
+
     } catch(e) {
+      console.error('提交错误:', e);
       btn.disabled = false;
       btn.innerHTML = '<span>✅</span><span>准时参加</span>';
       const toast = document.getElementById('toast');
